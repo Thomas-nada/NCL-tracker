@@ -1,10 +1,10 @@
-Of course. Here is the `readme.md` file for your project.
-
 # Cardano NCL Tracker
 
 A real-time dashboard to track Cardano treasury withdrawals against the Net Change Limit (NCL).
 
+## 🚀 Live Demo
 
+You can access the live tracker here: **[https://thomas-nada.github.io/NCL-tracker/](https://thomas-nada.github.io/NCL-tracker/)**
 
 ---
 
@@ -40,9 +40,3 @@ This tool is a single web page that performs a multi-step data-gathering process
 * JavaScript (ES6+)
 * Koios API
 * IPFS
-
----
-
-## 🚀 Live Demo
-
-You can access the live tracker here: **[https://thomas-nada.github.io/NCL-tracker/](https://thomas-nada.github.io/NCL-tracker/)**
