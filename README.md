@@ -1,46 +1,48 @@
+Of course. Here is the `readme.md` file for your project.
+
 # Cardano NCL Tracker
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-blue?style=for-the-badge&logo=githubpages)](https://thomas-nada.github.io/NCL-tracker/)
-
-A sleek, real-time, single-page web application to track Cardano treasury withdrawals against the current Net Change Limit (NCL).
+A real-time dashboard to track Cardano treasury withdrawals against the Net Change Limit (NCL).
 
 
-
-## 📜 About
-
-This tool provides a clear, up-to-date dashboard visualizing the state of the Cardano treasury for the current NCL budgetary period (Epochs 532-604). It was built to promote transparency in on-chain governance by making complex treasury data accessible and easy to understand at a glance.
-
-The entire application is a single `index.html` file with no external dependencies beyond CDN-hosted libraries.
 
 ---
 
 ## ✨ Features
 
-- **Live On-Chain Data**: Automatically fetches and displays the latest data on page load.
-- **Modern Dashboard Layout**: A clean, two-column layout with a summary panel and a scrollable list of withdrawals.
-- **NCL Summary**: Key metrics are displayed in a simple, easy-to-read format.
-- **Progress Visualization**: An animated progress bar shows the percentage of the NCL that has been withdrawn.
-- **Detailed Withdrawal List**: Each enacted treasury withdrawal is listed with its name, amount, and GovAction ID.
-- **External Links**: Every proposal title links directly to its entry on Cardanoscan for deeper investigation.
-- **Informational Sub-page**: An "About" page explains the purpose of the tool and the NCL itself.
+* **Live On-Chain Data**: Automatically fetches and displays the latest data on page load.
+* **Modern Dashboard Layout**: A clean, two-column layout with a persistent summary panel and a scrollable list of withdrawals.
+* **NCL Summary**: Key metrics including **Total Withdrawn**, **Net Change Limit**, and **Remaining Allowance** are clearly displayed.
+* **Progress Visualization**: An animated **progress bar** shows the percentage of the NCL that has been withdrawn.
+* **Detailed Withdrawal List**: Each enacted treasury withdrawal is listed as a separate transaction. Governance actions containing multiple withdrawals are clearly marked with a **"Multi-withdrawal"** badge.
+* **Advanced Sorting**: Sort the list of withdrawals by **Epoch**, **Amount**, or **Name** (alphabetical).
+* **Direct On-chain Links**: Every proposal title links to its `GovAction` on Cardanoscan, while each `TxID` links to its specific transaction.
+* **Informational Sub-page**: An "About" page explains the purpose of the tool and the NCL itself.
 
 ---
 
 ## ⚙️ How It Works
 
-The tool performs a multi-step data-gathering process entirely on the client-side:
+This tool is a single web page that performs a multi-step data-gathering process on page load:
 
-1.  **Fetch Proposals**: It begins by querying the **Koios API** to get a complete list of all governance proposals on the Cardano blockchain.
-2.  **Filter Data**: The script filters this list to isolate only the successful treasury withdrawals that have been ratified within the specified epoch range (532-604).
-3.  **Retrieve Metadata**: For each withdrawal, it checks for a metadata URL (`meta_url`) pointing to a file on the **InterPlanetary File System (IPFS)**. It then fetches this file from a public IPFS gateway to retrieve the official proposal title.
-4.  **Calculate & Display**: Finally, it calculates the total withdrawn Ada, compares it to the NCL, and dynamically renders the dashboard components.
+1.  **Fetch Proposals**: It begins by querying the **Koios API** to get a complete list of governance proposals.
+2.  **Filter Data**: The script isolates successful treasury withdrawals ratified within the current NCL period (Epochs 532-604).
+3.  **Identify Multi-withdrawal Actions**: It inspects the list to find governance actions (`proposal_id`) that are associated with more than one withdrawal transaction.
+4.  **Retrieve Metadata**: For each unique proposal, it follows a metadata URL to a file on the **InterPlanetary File System (IPFS)** to retrieve the official proposal title.
+5.  **Calculate, Sort & Display**: Finally, it calculates the summary, sorts the list (defaulting to the newest epoch first), and renders all the data on the dashboard.
 
 ---
 
 ## 🛠️ Technologies Used
 
--   **HTML5**
--   **Tailwind CSS** for styling.
--   **JavaScript (ES6+)** for all logic, including API calls and DOM manipulation.
--   **Koios API** for on-chain Cardano data.
--   **IPFS** for off-chain proposal metadata.
+* HTML5
+* Tailwind CSS
+* JavaScript (ES6+)
+* Koios API
+* IPFS
+
+---
+
+## 🚀 Live Demo
+
+You can access the live tracker here: **[https://thomas-nada.github.io/NCL-tracker/](https://thomas-nada.github.io/NCL-tracker/)**
