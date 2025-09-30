@@ -46,6 +46,15 @@
         .nav-btn {
             @apply px-4 py-2 font-semibold text-sm rounded-md transition-colors duration-300 text-gray-400 hover:bg-sky-500/5 hover:text-gray-200;
         }
+        .sort-btn {
+             @apply px-3 py-1 text-xs font-semibold rounded-md transition-colors duration-200 flex items-center;
+        }
+        .sort-btn.active {
+            @apply bg-sky-500/20 text-sky-300;
+        }
+         .sort-btn:not(.active) {
+            @apply text-gray-400 hover:bg-slate-700/50;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-gray-300 flex items-center justify-center min-h-screen p-4">
@@ -78,7 +87,18 @@
             
             <!-- Right Column: Results -->
             <section id="resultsContainer" class="col-span-1 lg:col-span-2 p-6 h-[75vh] overflow-y-auto">
-                 <!-- Results will be injected here -->
+                 <div id="resultsHeader" class="hidden flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-gray-300">Withdrawals</h2>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="text-gray-400">Sort by:</span>
+                        <button id="sortByEpochBtn" class="sort-btn active">Epoch <span id="epochSortArrow" class="ml-1">↓</span></button>
+                        <button id="sortByAmountBtn" class="sort-btn">Amount <span id="amountSortArrow" class="ml-1 hidden"></span></button>
+                        <button id="sortByAlphaBtn" class="sort-btn">Name <span id="alphaSortArrow" class="ml-1 hidden"></span></button>
+                    </div>
+                </div>
+                <div id="proposalsList">
+                    <!-- Proposals will be injected here -->
+                </div>
             </section>
         </main>
         
@@ -99,8 +119,9 @@
                     <ul class="list-disc list-inside space-y-2 mt-2 pl-4 text-gray-400">
                         <li><strong>Step 1: Fetch Proposals:</strong> It begins by querying the <a href="https://koios.rest/" target="_blank" class="text-pink-400 hover:underline">Koios API</a> to get a complete list of all governance proposals on the Cardano blockchain.</li>
                         <li><strong>Step 2: Filter Data:</strong> The tool filters this list to isolate only the successful treasury withdrawals that have been ratified within the specified epoch range.</li>
-                        <li><strong>Step 3: Retrieve Metadata:</strong> For each withdrawal, it checks for a metadata URL pointing to a file on the InterPlanetary File System (IPFS). It then fetches this file from an IPFS gateway to retrieve the official proposal title and other details.</li>
-                        <li><strong>Step 4: Calculate & Display:</strong> Finally, it calculates the total withdrawn Ada, compares it to the NCL, and renders the dashboard and the detailed list of proposals you see on the tracker page. Each proposal title links directly to its entry on Cardanoscan for further research.</li>
+                        <li><strong>Step 3: Identify Multi-withdrawal Actions:</strong> The tool inspects the list to find governance actions (`proposal_id`) that are associated with more than one withdrawal transaction, allowing them to be visually marked.</li>
+                        <li><strong>Step 4: Retrieve Metadata:</strong> For each unique proposal, it fetches the title from its metadata file on the InterPlanetary File System (IPFS).</li>
+                        <li><strong>Step 5: Calculate, Sort & Display:</strong> Finally, it calculates the NCL summary and renders the list of individual withdrawal transactions. The list is initially sorted by the newest ratification epoch. The user can re-sort the list by <strong>Epoch</strong>, <strong>Amount</strong>, or <strong>Name</strong> in either ascending or descending order using the controls at the top of the list. Each entry is marked if it's part of a multi-withdrawal action, and the GovAction ID, TxID, and ratification epoch are shown. The title links to the GovAction page, and the TxID links to its specific transaction on Cardanoscan.</li>
                     </ul>
                 </div>
                 <footer class="text-center pt-8 text-gray-500 text-sm">
@@ -119,12 +140,70 @@
 
     <script>
         const LOVELACE_PER_ADA = 1000000n;
+        let proposalsData = [];
+        let currentSort = { by: 'epoch', order: 'desc' };
 
         const formatNumber = (num) => {
             if (typeof num === 'bigint') {
                 return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
             }
             return new Intl.NumberFormat().format(num);
+        };
+
+        const renderProposals = () => {
+            const proposalsList = document.getElementById('proposalsList');
+            proposalsList.innerHTML = '';
+
+            // Sort the data
+            proposalsData.sort((a, b) => {
+                if (currentSort.by === 'epoch') {
+                    return currentSort.order === 'desc' ? b.ratified_epoch - a.ratified_epoch : a.ratified_epoch - b.ratified_epoch;
+                }
+                if (currentSort.by === 'amount') {
+                    const amountA = BigInt(a.withdrawal.amount);
+                    const amountB = BigInt(b.withdrawal.amount);
+                    if (amountA > amountB) return currentSort.order === 'desc' ? -1 : 1;
+                    if (amountA < amountB) return currentSort.order === 'desc' ? 1 : -1;
+                    return 0;
+                }
+                if (currentSort.by === 'alpha') {
+                    return currentSort.order === 'asc' 
+                        ? a.name.localeCompare(b.name) 
+                        : b.name.localeCompare(a.name);
+                }
+                return 0;
+            });
+
+            let resultsHTML = '<div class="fade-in space-y-2">';
+            for (const proposal of proposalsData) {
+                 const name = proposal.name || "Untitled Proposal";
+                 const isMulti = proposal.isMulti;
+                 const multiBadge = isMulti ? `<span class="text-xs font-semibold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">Multi-withdrawal</span>` : '';
+                 const adaAmount = formatNumber(BigInt(proposal.withdrawal.amount) / LOVELACE_PER_ADA);
+                 const govActionUrl = `https://cardanoscan.io/govAction/${proposal.proposal_id}`;
+                 const transactionUrl = `https://cardanoscan.io/transaction/${proposal.proposal_tx_hash}`;
+                    
+                 resultsHTML += `
+                     <div class="proposal-card p-4 rounded-md border border-transparent hover:border-sky-500/30">
+                          <div class="flex justify-between items-start">
+                             <div class="flex items-center gap-2 overflow-hidden pr-2">
+                                  <a href="${govActionUrl}" target="_blank" rel="noopener noreferrer" class="font-semibold text-sky-300 truncate hover:underline" title="${name}">${name}</a>
+                                 ${multiBadge}
+                             </div>
+                             <div class="text-right flex-shrink-0">
+                                 <p class="font-mono font-semibold text-md text-gray-100 whitespace-nowrap">${adaAmount} Ada</p>
+                             </div>
+                          </div>
+                          <div class="font-mono text-xs text-gray-500 mt-1 space-y-0.5">
+                             <p class="truncate" title="${proposal.proposal_id}">GovAction ID: ${proposal.proposal_id}</p>
+                             <a href="${transactionUrl}" target="_blank" rel="noopener noreferrer" class="truncate block hover:text-gray-300" title="${proposal.proposal_tx_hash}">TxID: ${proposal.proposal_tx_hash}</a>
+                             <p class="truncate">Ratified: Epoch ${proposal.ratified_epoch}</p>
+                          </div>
+                     </div>
+                 `;
+            }
+            resultsHTML += '</div>';
+            proposalsList.innerHTML = resultsHTML;
         };
         
         const checkWithdrawals = async () => {
@@ -135,12 +214,13 @@
             const loadingDiv = document.getElementById('loading');
             const messageDiv = document.getElementById('message');
             const summaryContent = document.getElementById('summaryContent');
-            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsHeader = document.getElementById('resultsHeader');
 
             loadingDiv.classList.remove('hidden');
             messageDiv.textContent = '';
             summaryContent.classList.add('hidden');
-            resultsContainer.innerHTML = '';
+            resultsHeader.classList.add('hidden');
+
 
             try {
                 const apiUrl = `https://cors.eu.org/api.koios.rest/api/v1/proposal_list`;
@@ -164,6 +244,44 @@
                     loadingDiv.classList.add('hidden');
                     return;
                 }
+                
+                // Count occurrences of each proposal_id to identify multi-withdrawal actions
+                const proposalIdCounts = {};
+                for (const p of filteredProposals) {
+                    proposalIdCounts[p.proposal_id] = (proposalIdCounts[p.proposal_id] || 0) + 1;
+                }
+
+                // Get unique proposals to fetch IPFS data for, avoiding redundant fetches
+                const uniqueProposalsForIpfs = {};
+                for (const p of filteredProposals) {
+                    if (!uniqueProposalsForIpfs[p.proposal_id] && p.meta_url) {
+                        uniqueProposalsForIpfs[p.proposal_id] = { meta_url: p.meta_url, name: "Untitled Proposal" };
+                    }
+                }
+
+                const ipfsPromises = Object.entries(uniqueProposalsForIpfs).map(async ([id, data]) => {
+                    const ipfsGateway = "https://ipfs.io/ipfs/";
+                    const ipfsUrl = data.meta_url.replace("ipfs://", ipfsGateway);
+                    try {
+                        const ipfsResponse = await fetch(ipfsUrl);
+                        if (ipfsResponse.ok) {
+                            const ipfsData = await ipfsResponse.json();
+                            if (ipfsData?.body?.title) {
+                                uniqueProposalsForIpfs[id].name = ipfsData.body.title;
+                            }
+                        }
+                    } catch (e) {
+                        console.error(`Could not fetch IPFS data from ${ipfsUrl}:`, e);
+                    }
+                });
+
+                await Promise.all(ipfsPromises);
+
+                proposalsData = filteredProposals.map(p => ({
+                    ...p,
+                    name: uniqueProposalsForIpfs[p.proposal_id]?.name || "Untitled Proposal",
+                    isMulti: proposalIdCounts[p.proposal_id] > 1,
+                }));
 
                 const totalLovelace = filteredProposals.reduce((sum, p) => sum + BigInt(p.withdrawal.amount), 0n);
                 const totalADA = totalLovelace / LOVELACE_PER_ADA;
@@ -186,7 +304,6 @@
                                 <span>${formatNumber(nclADA)} Ada</span>
                             </div>
                         </div>
-
                         <div class="space-y-4 pt-4 border-t border-sky-500/20">
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-400">Epoch Range</span>
@@ -208,47 +325,16 @@
                     </div>
                 `;
                 summaryContent.classList.remove('hidden');
-                 setTimeout(() => {
+                resultsHeader.classList.remove('hidden');
+
+                setTimeout(() => {
                     document.getElementById('progressBarInner').style.width = `${withdrawnPercentage}%`;
                 }, 100);
+                
+                renderProposals();
 
-
-                let resultsHTML = '<div class="fade-in space-y-2">';
-
-                for (const proposal of filteredProposals) {
-                    let name = "Untitled Proposal";
-                    if (proposal.meta_url) {
-                        const ipfsGateway = "https://ipfs.io/ipfs/";
-                        const ipfsUrl = proposal.meta_url.replace("ipfs://", ipfsGateway);
-                        try {
-                            const ipfsResponse = await fetch(ipfsUrl);
-                            if (ipfsResponse.ok) {
-                                const ipfsData = await ipfsResponse.json();
-                                if (ipfsData?.body?.title) name = ipfsData.body.title;
-                            }
-                        } catch (e) {
-                            console.error(`Could not fetch or parse IPFS data from ${ipfsUrl}:`, e);
-                        }
-                    }
-
-                    const adaAmount = formatNumber(BigInt(proposal.withdrawal.amount) / LOVELACE_PER_ADA);
-                    const cardanoscanUrl = `https://cardanoscan.io/govAction/${proposal.proposal_id}`;
-                    
-                    resultsHTML += `
-                        <a href="${cardanoscanUrl}" target="_blank" rel="noopener noreferrer" class="proposal-card block p-4 rounded-md border border-transparent hover:border-sky-500/30">
-                             <div class="flex justify-between items-center">
-                                <p class="font-semibold text-sky-300 truncate pr-4" title="${name}">${name}</p>
-                                <p class="font-mono font-semibold text-md text-gray-100 whitespace-nowrap">${adaAmount} Ada</p>
-                             </div>
-                             <p class="font-mono text-xs text-gray-500 truncate" title="${proposal.proposal_id}">ID: ${proposal.proposal_id}</p>
-                        </a>
-                    `;
-                }
-
-                resultsHTML += '</div>';
-                resultsContainer.innerHTML = resultsHTML;
-
-            } catch (error) {
+            } catch (error)
+            {
                 messageDiv.innerHTML = `<span class="text-red-400">❌ An error occurred: ${error.message}</span>`;
                 console.error("Fetch Error:", error);
             } finally {
@@ -279,6 +365,54 @@
         showTrackerBtn.addEventListener('click', () => showPage('tracker'));
         showAboutBtn.addEventListener('click', () => showPage('about'));
 
+        // --- Sorting Logic ---
+        const sortByEpochBtn = document.getElementById('sortByEpochBtn');
+        const sortByAmountBtn = document.getElementById('sortByAmountBtn');
+        const sortByAlphaBtn = document.getElementById('sortByAlphaBtn');
+        const epochSortArrow = document.getElementById('epochSortArrow');
+        const amountSortArrow = document.getElementById('amountSortArrow');
+        const alphaSortArrow = document.getElementById('alphaSortArrow');
+
+        const updateSort = (sortBy) => {
+             if (currentSort.by === sortBy) {
+                 // asc is A-Z, so we default to that for alpha
+                 if (sortBy === 'alpha') {
+                     currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+                 } else {
+                     currentSort.order = currentSort.order === 'desc' ? 'asc' : 'desc';
+                 }
+             } else {
+                 currentSort.by = sortBy;
+                 currentSort.order = sortBy === 'alpha' ? 'asc' : 'desc';
+             }
+
+             sortByEpochBtn.classList.toggle('active', currentSort.by === 'epoch');
+             sortByAmountBtn.classList.toggle('active', currentSort.by === 'amount');
+             sortByAlphaBtn.classList.toggle('active', currentSort.by === 'alpha');
+
+             // Update arrows
+            epochSortArrow.classList.add('hidden');
+            amountSortArrow.classList.add('hidden');
+            alphaSortArrow.classList.add('hidden');
+
+            if (currentSort.by === 'epoch') {
+                epochSortArrow.classList.remove('hidden');
+                epochSortArrow.textContent = currentSort.order === 'desc' ? '↓' : '↑';
+            } else if (currentSort.by === 'amount') {
+                amountSortArrow.classList.remove('hidden');
+                amountSortArrow.textContent = currentSort.order === 'desc' ? '↓' : '↑';
+            } else { // Sort by alpha
+                alphaSortArrow.classList.remove('hidden');
+                alphaSortArrow.textContent = currentSort.order === 'asc' ? '↑' : '↓';
+            }
+
+             renderProposals();
+        };
+
+        sortByEpochBtn.addEventListener('click', () => updateSort('epoch'));
+        sortByAmountBtn.addEventListener('click', () => updateSort('amount'));
+        sortByAlphaBtn.addEventListener('click', () => updateSort('alpha'));
+
         window.onload = () => {
             checkWithdrawals();
             showPage('tracker');
@@ -286,4 +420,5 @@
     </script>
 </body>
 </html>
+
 
