@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardano NCL Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border-top-color: #38bdf8; /* Sky Blue */
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .proposal-card {
+            transition: background-color 0.3s ease;
+        }
+        .proposal-card:hover {
+            background-color: rgba(30, 41, 59, 0.7); /* slate-800 with opacity */
+        }
+        .text-gradient {
+            background-image: linear-gradient(45deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+        .fade-in {
+            animation: fadeInAnimation 0.8s ease-in-out forwards;
+            opacity: 0;
+        }
+        @keyframes fadeInAnimation {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .progress-bar-inner {
+            transition: width 1s ease-out;
+        }
+        .nav-btn {
+            @apply px-4 py-2 font-semibold text-sm rounded-md transition-colors duration-300 text-gray-400 hover:bg-sky-500/5 hover:text-gray-200;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-gray-300 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-6xl mx-auto bg-slate-800/60 backdrop-blur-xl rounded-2xl shadow-2xl border border-sky-500/20 overflow-hidden">
+        
+        <!-- Header & Navigation -->
+        <header class="flex flex-col md:flex-row justify-between items-center p-6 border-b border-sky-500/20">
+            <div class="flex items-center gap-4">
+                <div>
+                    <h1 class="text-xl font-bold text-gray-100">Cardano NCL Tracker</h1>
+                    <p class="text-gray-400 text-xs">Real-time treasury withdrawal monitoring.</p>
+                </div>
+            </div>
+            <nav class="flex gap-2 mt-4 md:mt-0">
+                <button id="showTrackerBtn" class="nav-btn hidden">Tracker</button>
+                <button id="showAboutBtn" class="nav-btn">About</button>
+            </nav>
+        </header>
+
+        <main id="trackerPage" class="grid grid-cols-1 lg:grid-cols-3">
+             <!-- Left Column: Summary -->
+            <aside id="summaryContainer" class="col-span-1 p-6 border-r border-sky-500/20">
+                <div id="loading" class="flex flex-col justify-center items-center py-8">
+                    <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-600 h-12 w-12 mb-4"></div>
+                    <p class="font-semibold text-gray-300">Contacting Koios & IPFS...</p>
+                </div>
+                <div id="message" class="text-center py-4 font-semibold"></div>
+                <div id="summaryContent" class="hidden"></div>
+            </aside>
+            
+            <!-- Right Column: Results -->
+            <section id="resultsContainer" class="col-span-1 lg:col-span-2 p-6 h-[75vh] overflow-y-auto">
+                 <!-- Results will be injected here -->
+            </section>
+        </main>
+        
+        <!-- About Page -->
+        <div id="aboutPage" class="hidden p-8 text-gray-300 space-y-6 h-[75vh] overflow-y-auto">
+             <h2 class="text-3xl font-bold text-center text-white">About This Tool</h2>
+                <div>
+                    <h3 class="font-semibold text-xl text-sky-300 mb-2">Purpose</h3>
+                    <p>The Cardano NCL Tracker provides a clear, real-time visualization of the Cardano treasury's Net Change Limit (NCL). It automatically monitors all enacted treasury withdrawals within the current NCL period (Epochs 532-604) and presents the data in an easy-to-understand format, helping to promote transparency in on-chain governance.</p>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-xl text-sky-300 mb-2">About the NCL</h3>
+                    <p>The Net Change Limit (NCL) is a critical safeguard for the Cardano treasury, established through on-chain governance. It defines the maximum total amount of Ada that can be withdrawn over a set budgetary period. This mechanism ensures the long-term sustainability of the treasury by preventing rapid depletion and encouraging disciplined financial planning. The NCL is voted on by the community of DReps (Delegated Representatives), making it a cornerstone of Cardano's decentralized governance model.</p>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-xl text-sky-300 mb-2">How It Works</h3>
+                    <p>This tool is a single, self-contained web page that performs a multi-step data gathering process when you load it:</p>
+                    <ul class="list-disc list-inside space-y-2 mt-2 pl-4 text-gray-400">
+                        <li><strong>Step 1: Fetch Proposals:</strong> It begins by querying the <a href="https://koios.rest/" target="_blank" class="text-pink-400 hover:underline">Koios API</a> to get a complete list of all governance proposals on the Cardano blockchain.</li>
+                        <li><strong>Step 2: Filter Data:</strong> The tool filters this list to isolate only the successful treasury withdrawals that have been ratified within the specified epoch range.</li>
+                        <li><strong>Step 3: Retrieve Metadata:</strong> For each withdrawal, it checks for a metadata URL pointing to a file on the InterPlanetary File System (IPFS). It then fetches this file from an IPFS gateway to retrieve the official proposal title and other details.</li>
+                        <li><strong>Step 4: Calculate & Display:</strong> Finally, it calculates the total withdrawn Ada, compares it to the NCL, and renders the dashboard and the detailed list of proposals you see on the tracker page. Each proposal title links directly to its entry on Cardanoscan for further research.</li>
+                    </ul>
+                </div>
+                <footer class="text-center pt-8 text-gray-500 text-sm">
+                    <p>Powered by the <a href="https://koios.rest/" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:underline">Koios API</a></p>
+                </footer>
+        </div>
+
+    </div>
+
+    <!-- Hidden form remains for script logic -->
+    <form id="checkForm" class="hidden">
+        <input type="number" id="startEpoch" value="532">
+        <input type="number" id="endEpoch" value="604">
+        <input type="number" id="ncl" value="350000000">
+    </form>
+
+    <script>
+        const LOVELACE_PER_ADA = 1000000n;
+
+        const formatNumber = (num) => {
+            if (typeof num === 'bigint') {
+                return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
+            return new Intl.NumberFormat().format(num);
+        };
+        
+        const checkWithdrawals = async () => {
+            const startEpoch = document.getElementById('startEpoch').value;
+            const endEpoch = document.getElementById('endEpoch').value;
+            const nclADA = document.getElementById('ncl').value;
+
+            const loadingDiv = document.getElementById('loading');
+            const messageDiv = document.getElementById('message');
+            const summaryContent = document.getElementById('summaryContent');
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            loadingDiv.classList.remove('hidden');
+            messageDiv.textContent = '';
+            summaryContent.classList.add('hidden');
+            resultsContainer.innerHTML = '';
+
+            try {
+                const apiUrl = `https://cors.eu.org/api.koios.rest/api/v1/proposal_list`;
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                if (!response.ok) throw new Error(`Koios API Error: ${response.status} ${response.statusText}`);
+                
+                const proposals = await response.json();
+
+                const filteredProposals = proposals.filter(p =>
+                    p.withdrawal && p.withdrawal.amount &&
+                    p.ratified_epoch >= startEpoch && p.ratified_epoch <= endEpoch
+                );
+
+                if (filteredProposals.length === 0) {
+                    messageDiv.textContent = `⚠️ No treasury withdrawals found between epochs ${startEpoch} and ${endEpoch}.`;
+                    loadingDiv.classList.add('hidden');
+                    return;
+                }
+
+                const totalLovelace = filteredProposals.reduce((sum, p) => sum + BigInt(p.withdrawal.amount), 0n);
+                const totalADA = totalLovelace / LOVELACE_PER_ADA;
+                const nclLovelace = BigInt(nclADA) * LOVELACE_PER_ADA;
+                const remainingLovelace = nclLovelace - totalLovelace;
+                const remainingADA = remainingLovelace / LOVELACE_PER_ADA;
+                const withdrawnPercentage = (Number(totalADA) / Number(nclADA)) * 100;
+
+                summaryContent.innerHTML = `
+                    <div class="fade-in space-y-6">
+                        <div>
+                           <h2 class="text-lg font-semibold text-gray-300 mb-3">NCL Progress</h2>
+                           <div class="w-full bg-slate-900 rounded-full h-5 border border-sky-500/30 overflow-hidden">
+                                <div id="progressBarInner" class="progress-bar-inner bg-gradient-to-r from-sky-500 to-cyan-400 h-full rounded-full flex items-center justify-center text-black font-bold text-xs" style="width: 0%;">
+                                    ${withdrawnPercentage.toFixed(2)}%
+                                </div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-400 mt-2 px-1">
+                                <span>0 Ada</span>
+                                <span>${formatNumber(nclADA)} Ada</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4 pt-4 border-t border-sky-500/20">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Epoch Range</span>
+                                <span class="font-semibold text-gray-200">${startEpoch} → ${endEpoch}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Total Withdrawn</span>
+                                <span class="font-semibold text-teal-300">${formatNumber(totalADA)} Ada</span>
+                            </div>
+                             <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Net Change Limit</span>
+                                <span class="font-semibold text-sky-300">${formatNumber(nclADA)} Ada</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-400">Remaining Allowance</span>
+                                <span class="font-semibold text-purple-300">${formatNumber(remainingADA)} Ada</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                summaryContent.classList.remove('hidden');
+                 setTimeout(() => {
+                    document.getElementById('progressBarInner').style.width = `${withdrawnPercentage}%`;
+                }, 100);
+
+
+                let resultsHTML = '<div class="fade-in space-y-2">';
+
+                for (const proposal of filteredProposals) {
+                    let name = "Untitled Proposal";
+                    if (proposal.meta_url) {
+                        const ipfsGateway = "https://ipfs.io/ipfs/";
+                        const ipfsUrl = proposal.meta_url.replace("ipfs://", ipfsGateway);
+                        try {
+                            const ipfsResponse = await fetch(ipfsUrl);
+                            if (ipfsResponse.ok) {
+                                const ipfsData = await ipfsResponse.json();
+                                if (ipfsData?.body?.title) name = ipfsData.body.title;
+                            }
+                        } catch (e) {
+                            console.error(`Could not fetch or parse IPFS data from ${ipfsUrl}:`, e);
+                        }
+                    }
+
+                    const adaAmount = formatNumber(BigInt(proposal.withdrawal.amount) / LOVELACE_PER_ADA);
+                    const cardanoscanUrl = `https://cardanoscan.io/govAction/${proposal.proposal_id}`;
+                    
+                    resultsHTML += `
+                        <a href="${cardanoscanUrl}" target="_blank" rel="noopener noreferrer" class="proposal-card block p-4 rounded-md border border-transparent hover:border-sky-500/30">
+                             <div class="flex justify-between items-center">
+                                <p class="font-semibold text-sky-300 truncate pr-4" title="${name}">${name}</p>
+                                <p class="font-mono font-semibold text-md text-gray-100 whitespace-nowrap">${adaAmount} Ada</p>
+                             </div>
+                             <p class="font-mono text-xs text-gray-500 truncate" title="${proposal.proposal_id}">ID: ${proposal.proposal_id}</p>
+                        </a>
+                    `;
+                }
+
+                resultsHTML += '</div>';
+                resultsContainer.innerHTML = resultsHTML;
+
+            } catch (error) {
+                messageDiv.innerHTML = `<span class="text-red-400">❌ An error occurred: ${error.message}</span>`;
+                console.error("Fetch Error:", error);
+            } finally {
+                loadingDiv.classList.add('hidden');
+            }
+        };
+        
+        // --- Page Switching Logic ---
+        const trackerPage = document.getElementById('trackerPage');
+        const aboutPage = document.getElementById('aboutPage');
+        const showTrackerBtn = document.getElementById('showTrackerBtn');
+        const showAboutBtn = document.getElementById('showAboutBtn');
+
+        const showPage = (pageToShow) => {
+            if (pageToShow === 'tracker') {
+                trackerPage.style.display = 'grid';
+                aboutPage.style.display = 'none';
+                showTrackerBtn.classList.add('hidden');
+                showAboutBtn.classList.remove('hidden');
+            } else if (pageToShow === 'about') {
+                trackerPage.style.display = 'none';
+                aboutPage.style.display = 'block';
+                showTrackerBtn.classList.remove('hidden');
+                showAboutBtn.classList.add('hidden');
+            }
+        };
+
+        showTrackerBtn.addEventListener('click', () => showPage('tracker'));
+        showAboutBtn.addEventListener('click', () => showPage('about'));
+
+        window.onload = () => {
+            checkWithdrawals();
+            showPage('tracker');
+        };
+    </script>
+</body>
+</html>
+
