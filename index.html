@@ -314,13 +314,18 @@
                                 <span class="font-semibold text-teal-300">${formatNumber(totalADA)} Ada</span>
                             </div>
                              <div class="flex justify-between items-center">
-                                <span class="text-gray-400">Net Change Limit</span>
+                                <a href="https://cardanoscan.io/govAction/gov_action1nd3t833j7v5sz65k3tp9yyvztw60sjcjgcgjr37682s3m7frwrusqmd2k80?tab=meta" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-sky-300 transition-colors duration-200 underline decoration-dotted hover:decoration-solid">Net Change Limit</a>
                                 <span class="font-semibold text-sky-300">${formatNumber(nclADA)} Ada</span>
                             </div>
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-400">Remaining Allowance</span>
                                 <span class="font-semibold text-purple-300">${formatNumber(remainingADA)} Ada</span>
                             </div>
+                        </div>
+                         <div class="pt-4 border-t border-sky-500/20">
+                            <p class="text-xs text-gray-500 italic text-center">
+                                The NCL is a community-approved safeguard setting the maximum treasury spend for a budgetary period.
+                            </p>
                         </div>
                     </div>
                 `;
@@ -420,5 +425,4 @@
     </script>
 </body>
 </html>
-
 
